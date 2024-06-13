@@ -1,0 +1,75 @@
+# Import packages # Importing the libraries
+
+# Data preprocessing and Vectorization
+import pandas as pd
+import numpy as np
+
+# Data Visualizations 
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+import string
+import io
+
+# For dealing with warnings
+import warnings
+warnings.filterwarnings("ignore")
+
+
+# Making the NN model
+from wordcloud import WordCloud, STOPWORDS
+from wordcloud import ImageColorGenerator  # Correct module name
+from PIL import Image
+from sklearn.feature_extraction.text import CountVectorizer
+import os
+from nltk.corpus import stopwords
+#from PIL import Image
+#from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score, roc_curve
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import roc_curve, auc
+from sklearn import metrics
+from sklearn import model_selection
+from sklearn import svm
+from nltk import word_tokenize
+from sklearn.metrics import roc_auc_score
+
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+#from sklearn.metrics import plot_confusion_matrix
+
+# Parent class
+class data_read_write():
+    def __init__(self, file_name):
+        self.file_name = file_name
+
+    def read_csv_file(self, file_name):
+        # Implement the logic to read the CSV file and return a DataFrame
+        # For example:
+        df = pd.read_csv(self.file_name)
+        return df
+
+    def write_data(self, data):
+        # Implement the logic to write data to the specified file (self.file_name)
+        pass
+# Child class for data_read_write
+class generate_word_cloud(data_read_write):
+    def _init_(self):
+        pass
+
+    # Child own function
+    def variance_column(self, data):
+        return variance(data)
+    #polynomiphysim
+    def word_cloud(self, df_column, output_image_file):
+        text = " ".join(review for review in df_column)
+        stopwords = set (STOPWORDS)
+        stopwords.update(["subject"])
+        wordcloud = WordCloud(width = 1200, height = 800, stopwords=stopwords, max_font_size = 50, margin=0, background_color='white').generate(text)
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        plt.show()
+        wordcloud.to_file(output_image_file)
+        return
