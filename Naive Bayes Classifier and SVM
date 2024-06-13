@@ -1,0 +1,644 @@
+# Import packages # Importing the libraries
+
+# Data preprocessing and Vectorization
+import pandas as pd
+import numpy as np
+
+# Data Visualizations 
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+import string
+import io
+
+# For dealing with warnings
+import warnings
+warnings.filterwarnings("ignore")
+
+
+# Making the NN model
+from wordcloud import WordCloud, STOPWORDS
+from wordcloud import ImageColorGenerator  # Correct module name
+from PIL import Image
+from sklearn.feature_extraction.text import CountVectorizer
+import os
+from nltk.corpus import stopwords
+#from PIL import Image
+#from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score, roc_curve
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import roc_curve, auc
+from sklearn import metrics
+from sklearn import model_selection
+from sklearn import svm
+from nltk import word_tokenize
+from sklearn.metrics import roc_auc_score
+
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+#from sklearn.metrics import plot_confusion_matrix
+
+# Parent class
+class data_read_write():
+    def __init__(self, file_name):
+        self.file_name = file_name
+
+    def read_csv_file(self, file_name):
+        # Implement the logic to read the CSV file and return a DataFrame
+        # For example:
+        df = pd.read_csv(self.file_name)
+        return df
+
+    def write_data(self, data):
+        # Implement the logic to write data to the specified file (self.file_name)
+        pass
+
+# Child class for data_read_write
+class generate_word_cloud(data_read_write):
+    def _init_(self):
+        pass
+    # Child own function
+    def variance_column(self, data):
+        return variance(data)
+    #polynomiphysim
+    def word_cloud(self, df_column, output_image_file):
+        text = " ".join(review for review in df_column)
+        stopwords = set (STOPWORDS)
+        stopwords.update(["subject"])
+        wordcloud = WordCloud(width = 1200, height = 800, stopwords=stopwords, max_font_size = 50, margin=0, background_color='white').generate(text)
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        plt.show()
+        wordcloud.to_file(output_image_file)
+        return
+
+# Child class for data_read_write
+class data_cleaning(data_read_write):
+    def _init_(self):
+        pass
+    def message_cleaning(self, message):
+        Test_punc_removed = [char for char in message if char not in string.punctuation]
+        Test_punc_removed_join = ''.join(Test_punc_removed)
+        Test_punc_removed_join_clean = [word for word in Test_punc_removed_join.split() if word.lower()not in stopwords.words('english')]
+        final_join = ' '.join(Test_punc_removed_join_clean)
+        return final_join
+    
+    def apply_to_column(self, data_column_text):
+        data_processed = data_column_text.apply(self.message_cleaning)
+        return data_processed
+
+# Define the apply_embedding_and_model class
+class ApplyEmbeddingAndModel:
+    def __init__(self, data_obj):
+        self.data_obj = data_obj
+    
+    def apply_count_vector(self, v_data_column):
+        vectorizer = CountVectorizer(min_df=2, analyzer="word", tokenizer=None, preprocessor=None, stop_words=None)
+        return vectorizer.fit_transform(v_data_column)
+    
+# Define the cv_object class
+class CVObject:
+    def __init__(self):
+        pass
+    
+    def apply_naive_bayes(self, X, y):
+        # Divide the data into training and testing prior to training
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        # Training the model
+        NB_classifier = MultinomialNB()  # Instantiate the MultinomialNB with parentheses
+        NB_classifier.fit(X_train, y_train)  # Fit the classifier to the training data
+        # Predicting the test set results
+        y_predict_test = NB_classifier.predict(X_test)
+        # Calculate and visualize the confusion matrix
+        cm = confusion_matrix(y_test, y_predict_test)
+        
+        # Evaluate the model
+        print(classification_report(y_test, y_predict_test))
+        print("test set")     
+        
+        print("\Accuracy Score: " + str(metrics.accuracy_score(y_test, y_predict_test)))
+        print("f1 Score: " + str(metrics.f1_score(y_test, y_predict_test)))
+        print("Recall: " + str(metrics.recall_score(y_test, y_predict_test)))
+        print("Precision: " + str(metrics.precision_score(y_test, y_predict_test)))
+        
+        class_names = ['ham', 'spam']
+        titles_options = [("confusion matrix, without normalization", None), 
+                           ("Normalized confusion matrix", 'true')]
+        for title, normalize in titles_options:
+            
+            # Plot the confusion matrix using seaborn heatmap
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=class_names, yticklabels=class_names)
+            plt.title("Confusion Matrix")
+            plt.xlabel("Predicted Label")
+            plt.ylabel("True Label")
+            plt.show()
+            
+        
+        # Generate a no skill prediction (majority class)
+        ns_probs = [0 for _ in range (len(y_test))]
+        # Predict probabilities
+        lr_probs = NB_classifier.predict_proba(X_test)
+        # Keep the probability for the positive outcome only
+        lr_probs = lr_probs[:, 1]
+        # Calculate scores
+        ns_auc = roc_auc_score(y_test, ns_probs)
+        lr_auc = roc_auc_score(y_test, lr_probs)
+        # Summarise score
+        #print('No skill: ROC AUC=%.3f' % (ns_auc))
+        #print('Naive Bayes: ROC AUC=%.3f' % (lr_auc))
+        # Calculate roc curves
+        ns_fpr, ns_tpr, _ = roc_curve(y_test, ns_probs)
+        lr_fpr, lr_tpr, _ = roc_curve(y_test, lr_probs)
+        # Plot the roc curve for the model
+        plt.plot(ns_fpr, ns_tpr, linestyle='--', label='No skill: ROC AUC=%.3f' % (ns_auc))
+        plt.plot(lr_fpr, lr_tpr, marker='.', label='Naive Bayes: ROC AUC=%.3f' % (lr_auc))
+        # Axes labels
+        plt.title("Receiver Operating Characteristic (ROC) Curve")
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        # show the legend
+        plt.legend()
+        # Show the plot
+        plt.show()
+        
+        return
+    
+    
+    def apply_svm(self, X, y):
+        # DIVIDE THE DATA INTO TRAINING AND TESTING PRIOR TO TRAINING
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        # Training the model
+        # 'linear', 'poly', 'rbf'
+        params = {'kernel': 'linear', 'C': 2, 'gamma': 1}
+        svm_cv = svm.SVC(C=params['C'], kernel=params['kernel'], gamma=params['gamma'], probability=True)
+        svm_cv.fit(X_train, y_train)
+        # Predicting the Test set results
+        y_predict_test = svm_cv.predict(X_test)
+        cm = confusion_matrix(y_test, y_predict_test)
+        # sns.heatmap(cm, annot=True)
+        # Evaluate the model
+        print(classification_report(y_test, y_predict_test))
+        print("test set")
+        
+        print("\Accuracy Score: " + str(metrics.accuracy_score(y_test, y_predict_test)))
+        print("f1 Score: " + str(metrics.f1_score(y_test, y_predict_test)))
+        print("Recall: " + str(metrics.recall_score(y_test, y_predict_test)))
+        print("Precision: " + str(metrics.precision_score(y_test, y_predict_test)))
+           
+        class_names = ['ham', 'spam']
+        titles_options = [("confusion matrix, without normalization", None), 
+                           ("Normalized confusion matrix", 'true')]
+        for title, normalize in titles_options:
+        
+        # Plot the confusion matrix using seaborn heatmap
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=class_names, yticklabels=class_names)
+            plt.title("Confusion Matrix")
+            plt.xlabel("Predicted Label")
+            plt.ylabel("True Label")
+            plt.show()
+        
+        # Generate a no skill prediction (majority class)
+        ns_probs = [0 for _ in range (len(y_test))]
+        # Predict probabilities
+        lr_probs = svm_cv.predict_proba(X_test)
+        # Keep the probability for the positive outcome only
+        lr_probs = lr_probs[:, 1]
+        # Calculate scores
+        ns_auc = roc_auc_score(y_test, ns_probs)
+        lr_auc = roc_auc_score(y_test, lr_probs)
+        # Summarise score
+        #print('No skill: ROC AUC=%.3f' % (ns_auc))
+        #print('SVM: ROC AUC=%.3f' % (lr_auc))
+        # Calculate roc curves
+        ns_fpr, ns_tpr, _ = roc_curve(y_test, ns_probs)
+        lr_fpr, lr_tpr, _ = roc_curve(y_test, lr_probs)
+        # Plt the roc curve for the model
+        plt.plot(ns_fpr, ns_tpr, linestyle='--', label='No skill: ROC AUC=%.3f' % (ns_auc))
+        plt.plot(lr_fpr, lr_tpr, marker='.', label='SVM: ROC AUC=%.3f' % (lr_auc))
+        # Axes labels
+        plt.title("Receiver Operating Characteristic (ROC) Curve")
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        #shw the legend
+        plt.legend()
+        # Show the plot
+        plt.show()
+        
+        return cv_object
+
+# Import data
+df = pd.read_csv("spam.csv", encoding='latin-1', sep=';')
+df
+
+# Assuming you have a dataframe called 'df' with unnecessary columns
+columns_to_drop = ['Column3', 'Column4', 'Column5']
+
+# Check if the columns exist in the dataframe
+existing_columns = [col for col in columns_to_drop if col in df.columns]
+
+# Drop the existing columns
+df.drop(existing_columns, axis=1, inplace=True)
+
+# Alternative way for removing unnecessary column and rename column
+df.rename(columns = {'Column1': 'Catergory', 'Column2': 'Text'}, inplace = True)
+df
+
+# Visualise dataset
+# Lets see which message is most popular ham/spam message
+df.groupby('Catergory').describe()
+
+# Visualise dataset
+# Lets see which message is most popular ham/spam message
+df.groupby('Text').describe()
+
+# Importing NLTK for natural language processing
+import nltk
+
+df['num_characters'] = df['Text'].apply(len)
+df['num_words'] = df['Text'].apply(lambda x: len(nltk.word_tokenize(x)))
+df['num_sentence'] = df['Text'].apply(lambda x: len(nltk.sent_tokenize(x)))
+
+df[['num_characters', 'num_words', 'num_sentence']].describe()
+
+# ## spam
+# df[df['Catergory'] == 1][['num_characters','num_words','num_sentences']].describe()
+
+df.info()
+
+df.drop
+
+# Turn spam/ham into numerical data, create new column called 'spam'
+df['spam'] = df['Catergory'].apply(lambda x: 1 if x == 'spam' else 0)
+df
+
+df[['num_characters', 'num_words', 'num_sentence']].describe()
+
+## spam
+df[df['spam'] == 1][['num_characters','num_words','num_sentence']].describe()
+
+import seaborn as sns
+
+plt.figure(figsize=(10,8))
+sns.histplot(df[df['spam'] == 0]['num_characters'])
+sns.histplot(df[df['spam'] == 1]['num_characters'],color='red')
+plt.show()
+
+plt.figure(figsize=(10,8))
+sns.histplot(df[df['spam'] == 0]['num_words'])
+sns.histplot(df[df['spam'] == 1]['num_words'],color='red')
+plt.show()
+
+plt.figure(figsize=(10,8))
+sns.histplot(df[df['spam'] == 0]['num_sentence'])
+sns.histplot(df[df['spam'] == 1]['num_sentence'],color='red')
+plt.show()
+
+sns.pairplot(df,hue='spam')
+plt.show()
+
+sns.heatmap(df.corr(),annot=True)
+plt.show()
+
+plt.figure(figsize=(10,8))
+sns.boxplot(x='spam',y='num_characters',data=df)
+
+# create train/test split
+x_train, x_test, y_train, y_test = train_test_split(df.Text, df.spam, test_size = 0.25)
+x_train.describe()
+
+# find word count and store data as a matrix
+cv = CountVectorizer()
+x_train_count = cv.fit_transform(x_train.values)
+
+df.head()
+df.tail()
+df.describe()
+df.info()
+
+# Assuming your DataFrame is named 'df'
+# Use the isnull() function to check for null values
+null_values = df.isnull()
+
+# Count the number of null values in each column
+null_counts = null_values.sum()
+
+# Display the null counts
+print(null_counts)
+
+# Handling Missing Values
+# Check for missing values
+print(df.isnull().sum())
+
+# Fill missing values with mean for multiple columns
+columns_to_fill = ['Catergory', 'Text']
+df[columns_to_fill] = df[columns_to_fill].fillna(df[columns_to_fill].mean())
+
+# Check if there are any remaining missing values
+print(df.isnull().sum())
+# Check available column names
+
+# Removing Duplicates
+# Check for duplicates
+print(df.duplicated().sum())
+
+# Drop duplicates
+df = df.drop_duplicates()
+df.shape
+
+# Lets get the length of the message
+df['length'] = df['Text'].apply(len)
+df['length'].max
+
+# Data_frame['length'].plot(bins=100, kind='hist')
+# Length of characters for ham emails is more as compares to spam emails
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+ham_messages_length = df[df['spam']==0]
+spam_messages_length = df[df['spam']==1]
+
+ham_messages_length['length'].plot(bins=100, kind='hist',label = 'Ham')
+spam_messages_length['length'].plot(bins=100, kind='hist',label = 'Spam')
+# sns.displot(ham_messages_length['length'], bins=10, norm_hist = True, label = 'Ham')
+# sns.displot(spam_messages_length['length'], bins=10, norm_hist = True, label = 'spam')
+plt.title('Distribution of Length of Email Text')
+plt.xlabel('Length of Email Text')
+plt.legend()
+
+#data_frame['spam']==0
+df[df['spam']==0].Text.values
+
+ham_words_length = [len(word_tokenize(title)) for title in df[df['spam']==0].Text.values]
+spam_words_length = [len(word_tokenize(title)) for title in df[df['spam']==1].Text.values]
+print(max(ham_words_length))
+print(max(spam_words_length))
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+ax = sns.distplot(ham_words_length, norm_hist = True, bins = 30, label = 'Ham')
+ax = sns.distplot(spam_words_length, norm_hist = True, bins = 30, label = 'Spam')
+
+#plt.legend()
+plt.title('Distribution of Number of Words')
+plt.xlabel('Number of Words')
+plt.legend()
+
+plt.show()
+
+# Mean words length
+def mean_word_length(x):
+    word_lengths = np.array([])
+    for word in word_tokenize(x):
+        word_lengths = np.append(word_lengths, len(word))
+    return word_lengths.mean()
+
+ham_meanword_length = df[df['spam']==0].Text.apply(mean_word_length)
+spam_meanword_length = df[df['spam']==1].Text.apply(mean_word_length)
+
+sns.distplot(ham_meanword_length, norm_hist = True, bins = 30, label = 'Ham')
+sns.distplot(spam_meanword_length , norm_hist = True, bins = 30, label = 'Spam')
+plt.title('Distribution of Mean Word Length')
+plt.xlabel('Mean Word Length')
+plt.legend()
+plt.show()
+
+# There is no significant difference for the length of words used by ham and spam emails
+
+# Checking the ratio of stop words
+# Both spam and ham contains stopwords
+# All Spam emails contain stop words with a mean of 0.281
+# All Ham emails contain stop words with a mean of 0.278
+# But we can see from the graph, spam email contain high stop words ratio as compared to ham emails.
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words('english'))
+
+def stop_words_ratio(x):
+    num_total_words = 0
+    num_stop_words = 0
+    for word in word_tokenize(x):
+        if word in stop_words:
+            num_stop_words += 1
+        num_total_words += 1
+    return num_stop_words/num_total_words
+
+ham_stopwords = df[df['spam']==0].Text.apply(stop_words_ratio)
+spam_stopwords = df[df['spam']==1].Text.apply(stop_words_ratio)
+
+sns.distplot(ham_stopwords, norm_hist = True, label = 'Ham')
+sns.distplot(spam_stopwords, label = 'Spam')
+
+print('Ham Mean: {:.3f}'.format(ham_stopwords.values.mean()))
+print('Spam Mean: {:.3f}'.format(spam_stopwords.values.mean()))
+plt.title('Distribution of Stop Words Ratio')
+plt.xlabel('Stop Words Ratio')
+plt.legend()
+
+spam_stopwords
+
+# Lets dividie the messages into spam and ham
+ham = df[df['spam']==0]
+spam = df[df['spam']==1]
+# Plot histograms of message lengths
+spam['length'].plot(bins=60, kind='hist')
+ham['length'].plot(bins=60, kind='hist')
+df['Ham(0) and Spam(1)'] = df['spam']
+# Calculate the percentage of spam and ham messages
+print('Spam percentage =', (len(spam) / len(df) )*100,"%")
+print('Ham percentage =', (len(ham) / len(df) )*100,"%")
+# Create a count plot
+#sns.countplot(df['Ham(0) and Spam(1)'], label="Count")
+sns.countplot(x='Ham(0) and Spam(1)', data=df)
+plt.xlabel('Ham(0) and Spam(1)')
+plt.ylabel('Count')
+plt.title('Number of Ham and Spam Messages')
+plt.show()
+
+
+word_cloud_obj = generate_word_cloud("spam.txt")
+word_cloud_obj.word_cloud(ham["Text"], "ham_word_cloud.png")
+word_cloud_obj.word_cloud(spam["Text"], "spam_word_cloud.png")
+
+# Stopwords are commonly used words in English which have no contextual meaning in an sentence. 
+#So therefore we remove them before classification.
+data_clean_obj = data_cleaning("spam.txt")
+# lets test the newly added function
+#df['clean_Column1'] = df['Column1'].apply(message_cleaning)
+# data_frame['clean_text'] = data_farme['text'].apply(data_clean_obj.message_cleaning)
+df['clean_Text'] = data_clean_obj.apply_to_column(df['Text'])
+df
+
+data_obj = data_clean_obj.apply_to_column(df['Text'])  # Replace 'Your_Data_Object' with the actual variable containing the data and the 'df' attribute.
+data_obj
+
+# APPLY COUNT VECTORIZER TO OUR MESSAGE LIST
+
+# Define the file name
+file_name = "spam1.csv"
+
+# Initialize the data_read_write class with the file name
+data_obj = data_read_write(file_name)
+
+# Create an instance of apply_embedding_and_model
+#cv_object = apply_embedding_and_model(data_obj)
+cv_object = ApplyEmbeddingAndModel(data_obj)
+#class ApplyEmbeddingAndModel:
+# Apply CountVectorizer to the 'clean_Column2' column
+spamham_countvectorizer = cv_object.apply_count_vector(df['clean_Text'])
+
+# Separating Descriptive and Target Feature
+X = spamham_countvectorizer
+label = df['spam'].values
+y = label
+
+# Assuming you have already defined the df DataFrame, X, and y data
+
+# Create an instance of cv_object
+cv_object_instance = CVObject()
+
+# Apply Naive Bayes classifier using the previously created CountVectorizer result
+cv_object_instance.apply_naive_bayes(spamham_countvectorizer, y)
+#cv_object_instance.apply_embedding_and_model(X, y)
+
+
+# Assuming you have already defined the df DataFrame, X, and y data
+
+# Create an instance of cv_object
+cv_object_instance = CVObject()
+
+# Apply svm classifier using the previously created CountVectorizer result
+cv_object_instance.apply_svm(spamham_countvectorizer, y)
+
+
+tprs = [] #ROC
+aucs = [] #AUC
+class_repo_lst = [] #Classification reports
+acc_repo = [] #accuracies
+conv_lst = [] #Confusion matrices
+accruacy_scores_lst = []
+
+from sklearn.metrics import RocCurveDisplay
+
+class CVObject:
+    def __init__(self):
+        pass
+    
+    # Other methods...
+
+    def cross_validate_Model(self, classifier, choice):
+        '''
+        parameters : 
+        1- classifier : Algorithm to train
+        2- choice : choose what you see.
+                    - 'r': Report classification & Roc_Curve
+                    - 'c': Confusion Matrix
+        '''
+        #----------Data------------------
+        X = np.array(df.Text)
+        y = np.array(df.spam)
+        X, y = X[y != 2], y[y != 2]
+        #----------Variables-------------
+        cv = StratifiedKFold(n_splits=20)
+        mean_fpr = np.linspace(0, 1, 100)
+
+        #--------------------------------
+        fig, ax = plt.subplots()
+        vec = CountVectorizer()
+
+        for i, (train, test) in enumerate(cv.split(X, y)):
+            training_data = vec.fit_transform(X[train])
+            testing_data = vec.transform(X[test])
+
+            classifier.fit(training_data, y[train])  # Fitting algorithm
+
+            y_pred = classifier.predict(testing_data)  # Getting predictions
+
+            accruacy_scores_lst.append(accuracy_score(y[test], y_pred))  # Save all accuracies in list
+
+            #=========================================================================
+            repo = classification_report(y[test], y_pred, target_names=['Ham','Spam'])
+            class_repo_lst.append(repo)
+            acc_repo.append(float(repo[203:207]))  # Get accuracy on spam
+            indx = acc_repo.index(max(acc_repo))
+            #=========================================================================== 
+
+            if choice == 'c':
+                conv_lst.append(confusion_matrix(y[test], y_pred))
+
+            if choice == 'r':
+                # Plot every fold
+                fpr, tpr, _ = roc_curve(y[test], y_pred)
+                roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot(ax=ax)
+
+                interp_tpr = np.interp(mean_fpr, fpr, tpr)
+                interp_tpr[0] = 0.0
+
+                tprs.append(interp_tpr)
+                aucs.append(auc(fpr, tpr))
+
+        if choice == 'r':
+            # Plotting AUC
+            ax.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', alpha=.8)
+
+            mean_tpr = np.max(tprs, axis=0)
+            mean_tpr[-1] = 1.0
+            mean_auc = auc(mean_fpr, mean_tpr)
+            std_auc = np.std(aucs)
+
+            # Plotting ROC
+            ax.plot(mean_fpr, mean_tpr, color='b', lw=2, alpha=.8)
+
+            print(class_repo_lst[indx])
+            
+            class_names = ['ham', 'spam']
+
+        if choice == 'c':
+            conv = conv_lst[indx]
+            sns.heatmap(conv, annot=True, fmt="d", cmap="Blues",annot_kws={"size": 16})
+#             xticklabels=class_names, yticklabels=class_names)            
+            plt.show()
+                        
+#             fig, ax = plt.subplots(figsize=(10, 6))
+#             ax.plot(fpr, tpr, color='orange', label='Random Forest: ROC AUC=%.3f' % (rf_auc))
+#             ax.plot(fpr, fpr, color='blue', linestyle='--', label='No skill: ROC AUC=%.3f' % (ns_auc))
+            
+        if choice == 'r':
+            ax.set(title="Maximum ROC curve for SVM after cross validation")
+            ax.get_legend().remove()
+            plt.show()
+            
+        class_repo_lst.clear()
+        acc_repo.clear()
+        conv_lst.clear()
+
+        return "Max_Accuracy : " + str(round(np.array(accruacy_scores_lst).max(), 4)) + "%"
+
+# Instantiate CVObject
+cv_object_instance = CVObject()
+
+# Apply cross-validation with Naive Bayes classifier
+cv_object_instance.cross_validate_Model(MultinomialNB(), 'r')
+
+# Apply cross-validation with Naive Bayes classifier for Confusion Matrix
+cv_object_instance.cross_validate_Model(MultinomialNB(), 'c')
+
+
+# # Instantiate CVObject
+# cv_object_instance = CVObject()
+
+# # Apply cross-validation with Naive Bayes classifier
+# cv_object_instance.cross_validate_Model(svm, 'r')
+
+from sklearn.svm import SVC
+
+# Instantiate SVM classifier
+svm_classifier = SVC()
+
+# Apply cross-validation with SVM classifier for ROC curve
+cv_object_instance.cross_validate_Model(svm_classifier, 'r')
+
+# Apply cross-validation with SVM classifier for Confusion Matrix
+cv_object_instance.cross_validate_Model(svm_classifier, 'c')
+
